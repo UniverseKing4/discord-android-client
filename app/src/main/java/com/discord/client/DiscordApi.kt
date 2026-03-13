@@ -33,7 +33,7 @@ class DiscordApi(private val oauth: DiscordOAuth) {
         }
     }
 
-    suspend fun sendMessage(channelId: String, content: String) = withContext(Dispatchers.IO) {
+    suspend fun sendMessage(channelId: String, content: String): Unit = withContext(Dispatchers.IO) {
         val token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
         val json = gson.toJson(mapOf("content" to content))
         val body = json.toRequestBody("application/json".toMediaType())
@@ -47,7 +47,8 @@ class DiscordApi(private val oauth: DiscordOAuth) {
         client.newCall(request).execute().use { response ->
             if (response.code == 401) {
                 if (oauth.refreshToken()) {
-                    return@withContext sendMessage(channelId, content)
+                    sendMessage(channelId, content)
+                    return@withContext
                 }
                 throw Exception("Authentication expired")
             }
