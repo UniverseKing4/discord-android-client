@@ -13,9 +13,10 @@ class DiscordApi {
     private val baseUrl = "https://discord.com/api/v10"
 
     suspend fun getMessages(token: String, channelId: String): List<Message> = withContext(Dispatchers.IO) {
+        val authToken = if (token.startsWith("Bot ")) token else "Bot $token"
         val request = Request.Builder()
             .url("$baseUrl/channels/$channelId/messages?limit=50")
-            .header("Authorization", token)
+            .header("Authorization", authToken)
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -26,12 +27,13 @@ class DiscordApi {
     }
 
     suspend fun sendMessage(token: String, channelId: String, content: String) = withContext(Dispatchers.IO) {
+        val authToken = if (token.startsWith("Bot ")) token else "Bot $token"
         val json = gson.toJson(mapOf("content" to content))
         val body = json.toRequestBody("application/json".toMediaType())
         
         val request = Request.Builder()
             .url("$baseUrl/channels/$channelId/messages")
-            .header("Authorization", token)
+            .header("Authorization", authToken)
             .post(body)
             .build()
 
