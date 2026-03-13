@@ -13,25 +13,47 @@
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
 
-    <EditText
-        android:id="@+id/tokenInput"
+    <Button
+        android:id="@+id/loginBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Bot Token"
-        android:inputType="textPassword"/>
+        android:text="Login with Discord"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/userText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="14sp"
+            android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/logoutBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Logout"
+            android:visibility="gone"/>
+    </LinearLayout>
 
     <EditText
         android:id="@+id/channelInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Channel ID"
-        android:inputType="number"/>
+        android:inputType="number"
+        android:enabled="false"/>
 
     <Button
         android:id="@+id/loadBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Load Messages"/>
+        android:text="Load Messages"
+        android:enabled="false"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/messagesView"
@@ -51,12 +73,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Message"/>
+            android:hint="Message"
+            android:enabled="false"/>
 
         <Button
             android:id="@+id/sendBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Send"/>
+            android:text="Send"
+            android:enabled="false"/>
     </LinearLayout>
 </LinearLayout>
