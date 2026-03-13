@@ -13,7 +13,11 @@ class DiscordApi(private val oauth: DiscordOAuth) {
     private val baseUrl = "https://discord.com/api/v10"
 
     suspend fun getMessages(channelId: String): List<Message> = withContext(Dispatchers.IO) {
-        val token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
+        var token = oauth.getAccessToken()
+        if (token == null) {
+            if (!oauth.refreshToken()) throw Exception("Not authenticated")
+            token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
+        }
         
         val request = Request.Builder()
             .url("$baseUrl/channels/$channelId/messages?limit=50")
@@ -25,16 +29,21 @@ class DiscordApi(private val oauth: DiscordOAuth) {
                 if (oauth.refreshToken()) {
                     return@withContext getMessages(channelId)
                 }
-                throw Exception("Authentication expired")
+                throw Exception("Session expired, please login again")
             }
-            if (!response.isSuccessful) throw Exception("Failed: ${response.code}")
+            if (!response.isSuccessful) throw Exception("Error ${response.code}: ${response.message}")
             val json = response.body?.string() ?: "[]"
             gson.fromJson(json, Array<Message>::class.java).toList()
         }
     }
 
     suspend fun sendMessage(channelId: String, content: String): Unit = withContext(Dispatchers.IO) {
-        val token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
+        var token = oauth.getAccessToken()
+        if (token == null) {
+            if (!oauth.refreshToken()) throw Exception("Not authenticated")
+            token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
+        }
+        
         val json = gson.toJson(mapOf("content" to content))
         val body = json.toRequestBody("application/json".toMediaType())
         
@@ -50,9 +59,9 @@ class DiscordApi(private val oauth: DiscordOAuth) {
                     sendMessage(channelId, content)
                     return@withContext
                 }
-                throw Exception("Authentication expired")
+                throw Exception("Session expired, please login again")
             }
-            if (!response.isSuccessful) throw Exception("Failed: ${response.code}")
+            if (!response.isSuccessful) throw Exception("Error ${response.code}: ${response.message}")
         }
     }
     
