@@ -18,8 +18,8 @@ class DiscordOAuth(private val context: Context) {
     private val gson = Gson()
     
     companion object {
-        const val CLIENT_ID = "YOUR_CLIENT_ID"
-        const val CLIENT_SECRET = "YOUR_CLIENT_SECRET"
+        const val CLIENT_ID = "1470848672626376911"
+        const val CLIENT_SECRET = "up5jnVrA_hK741leMOwAJR4HIyDbUOeI"
         const val REDIRECT_URI = "discord://oauth2/callback"
         const val AUTH_URL = "https://discord.com/api/oauth2/authorize"
         const val TOKEN_URL = "https://discord.com/api/oauth2/token"
