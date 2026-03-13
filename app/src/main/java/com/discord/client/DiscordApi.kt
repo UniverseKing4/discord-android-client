@@ -7,74 +7,47 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class DiscordApi(private val oauth: DiscordOAuth) {
+class DiscordApi {
     private val client = OkHttpClient()
     private val gson = Gson()
     private val baseUrl = "https://discord.com/api/v10"
 
-    suspend fun getMessages(channelId: String): List<Message> = withContext(Dispatchers.IO) {
-        var token = oauth.getAccessToken()
-        if (token == null) {
-            if (!oauth.refreshToken()) throw Exception("Not authenticated")
-            token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
-        }
-        
+    suspend fun getMessages(token: String, channelId: String): List<Message> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/channels/$channelId/messages?limit=50")
-            .header("Authorization", "Bearer $token")
+            .header("Authorization", token)
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (response.code == 401) {
-                if (oauth.refreshToken()) {
-                    return@withContext getMessages(channelId)
-                }
-                throw Exception("Session expired, please login again")
-            }
             if (!response.isSuccessful) throw Exception("Error ${response.code}: ${response.message}")
             val json = response.body?.string() ?: "[]"
             gson.fromJson(json, Array<Message>::class.java).toList()
         }
     }
 
-    suspend fun sendMessage(channelId: String, content: String): Unit = withContext(Dispatchers.IO) {
-        var token = oauth.getAccessToken()
-        if (token == null) {
-            if (!oauth.refreshToken()) throw Exception("Not authenticated")
-            token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
-        }
-        
+    suspend fun sendMessage(token: String, channelId: String, content: String) = withContext(Dispatchers.IO) {
         val json = gson.toJson(mapOf("content" to content))
         val body = json.toRequestBody("application/json".toMediaType())
         
         val request = Request.Builder()
             .url("$baseUrl/channels/$channelId/messages")
-            .header("Authorization", "Bearer $token")
+            .header("Authorization", token)
             .post(body)
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (response.code == 401) {
-                if (oauth.refreshToken()) {
-                    sendMessage(channelId, content)
-                    return@withContext
-                }
-                throw Exception("Session expired, please login again")
-            }
             if (!response.isSuccessful) throw Exception("Error ${response.code}: ${response.message}")
         }
     }
     
-    suspend fun getCurrentUser(): User = withContext(Dispatchers.IO) {
-        val token = oauth.getAccessToken() ?: throw Exception("Not authenticated")
-        
+    suspend fun getCurrentUser(token: String): User = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/users/@me")
-            .header("Authorization", "Bearer $token")
+            .header("Authorization", token)
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw Exception("Failed: ${response.code}")
+            if (!response.isSuccessful) throw Exception("Error ${response.code}: ${response.message}")
             val json = response.body?.string() ?: throw Exception("Empty response")
             gson.fromJson(json, User::class.java)
         }
