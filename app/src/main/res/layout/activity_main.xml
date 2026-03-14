@@ -1,62 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Discord Client"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp"/>
-
-    <EditText
-        android:id="@+id/tokenInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="User Token"
-        android:inputType="textPassword"/>
-
-    <EditText
-        android:id="@+id/channelInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Channel ID"
-        android:inputType="number"/>
-
-    <Button
-        android:id="@+id/loadBtn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Load Messages"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/messagesView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"/>
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Message Scheduler"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <EditText
+            android:id="@+id/tokenInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Token"
+            android:inputType="textPassword"/>
+
+        <EditText
+            android:id="@+id/channelInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Channel ID"
+            android:inputType="number"/>
 
         <EditText
             android:id="@+id/messageInput"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Message"/>
+            android:hint="Message"
+            android:minLines="2"/>
 
-        <Button
-            android:id="@+id/sendBtn"
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Send"/>
+            android:text="Timer"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/hoursInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Hours"
+                android:inputType="number"
+                android:text="0"/>
+
+            <EditText
+                android:id="@+id/minutesInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Minutes"
+                android:inputType="number"
+                android:text="0"
+                android:layout_marginStart="8dp"/>
+
+            <EditText
+                android:id="@+id/secondsInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Seconds"
+                android:inputType="number"
+                android:text="0"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/intervalToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Repeat (Interval)"/>
+
+        <Button
+            android:id="@+id/addBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add Scheduled Message"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scheduled Messages"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/scheduledList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="200dp"
+            android:layout_marginTop="8dp"/>
     </LinearLayout>
-</LinearLayout>
+</ScrollView>

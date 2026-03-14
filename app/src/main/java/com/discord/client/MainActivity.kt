@@ -1,10 +1,6 @@
 package com.discord.client
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,62 +11,87 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tokenInput: EditText
     private lateinit var channelInput: EditText
     private lateinit var messageInput: EditText
-    private lateinit var messagesView: RecyclerView
-    private lateinit var adapter: MessageAdapter
+    private lateinit var hoursInput: EditText
+    private lateinit var minutesInput: EditText
+    private lateinit var secondsInput: EditText
+    private lateinit var intervalToggle: CheckBox
+    private lateinit var scheduledList: RecyclerView
+    private lateinit var adapter: ScheduledMessageAdapter
     private val api = DiscordApi()
+    private val scheduler = MessageScheduler(api)
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        supportActionBar?.hide()
         setContentView(R.layout.activity_main)
         
         tokenInput = findViewById(R.id.tokenInput)
         channelInput = findViewById(R.id.channelInput)
         messageInput = findViewById(R.id.messageInput)
-        messagesView = findViewById(R.id.messagesView)
+        hoursInput = findViewById(R.id.hoursInput)
+        minutesInput = findViewById(R.id.minutesInput)
+        secondsInput = findViewById(R.id.secondsInput)
+        intervalToggle = findViewById(R.id.intervalToggle)
+        scheduledList = findViewById(R.id.scheduledList)
         
-        adapter = MessageAdapter()
-        messagesView.layoutManager = LinearLayoutManager(this)
-        messagesView.adapter = adapter
+        adapter = ScheduledMessageAdapter(
+            onDelete = { scheduler.cancel(it) },
+            onUpdate = { updateList() }
+        )
+        scheduledList.layoutManager = LinearLayoutManager(this)
+        scheduledList.adapter = adapter
         
-        findViewById<Button>(R.id.loadBtn).setOnClickListener { loadMessages() }
-        findViewById<Button>(R.id.sendBtn).setOnClickListener { sendMessage() }
+        findViewById<Button>(R.id.addBtn).setOnClickListener { addScheduledMessage() }
+        
+        scheduler.setUpdateCallback { updateList() }
     }
 
-    private fun loadMessages() {
+    private fun addScheduledMessage() {
         val token = tokenInput.text.toString()
         val channelId = channelInput.text.toString()
-        if (token.isEmpty() || channelId.isEmpty()) return
+        val message = messageInput.text.toString()
+        val hours = hoursInput.text.toString().toLongOrNull() ?: 0
+        val minutes = minutesInput.text.toString().toLongOrNull() ?: 0
+        val seconds = secondsInput.text.toString().toLongOrNull() ?: 0
+        val isInterval = intervalToggle.isChecked
         
-        scope.launch {
-            try {
-                val messages = api.getMessages(token, channelId)
-                adapter.setMessages(messages)
-            } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        if (token.isEmpty() || channelId.isEmpty() || message.isEmpty()) {
+            Toast.makeText(this, "Fill all fields", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val totalSeconds = hours * 3600 + minutes * 60 + seconds
+        if (totalSeconds <= 0) {
+            Toast.makeText(this, "Set a valid time", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        scheduler.schedule(token, channelId, message, totalSeconds, isInterval) { success, error ->
+            scope.launch {
+                if (!success) {
+                    Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_SHORT).show()
+                }
             }
         }
+        
+        messageInput.setText("")
+        hoursInput.setText("")
+        minutesInput.setText("")
+        secondsInput.setText("")
+        intervalToggle.isChecked = false
+        updateList()
     }
 
-    private fun sendMessage() {
-        val token = tokenInput.text.toString()
-        val channelId = channelInput.text.toString()
-        val content = messageInput.text.toString()
-        if (token.isEmpty() || channelId.isEmpty() || content.isEmpty()) return
-        
+    private fun updateList() {
         scope.launch {
-            try {
-                api.sendMessage(token, channelId, content)
-                messageInput.setText("")
-                loadMessages()
-            } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            adapter.setMessages(scheduler.getScheduled())
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        scheduler.cancelAll()
         scope.cancel()
     }
 }

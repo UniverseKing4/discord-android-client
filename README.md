@@ -1,19 +1,23 @@
-# Discord Android Client
+# Discord Message Scheduler
 
-Simple Android app for Discord API.
-
-## Usage
-
-1. Get your token
-2. Install APK from [Releases](https://github.com/UniverseKing4/discord-android-client/releases)
-3. Enter token and channel ID
-4. Load and send messages
+Android app to schedule Discord messages with timers and intervals.
 
 ## Features
 
-- Load last 50 messages
-- Send messages
-- Simple UI
+- Schedule messages with custom timers (hours, minutes, seconds)
+- Interval mode for repeating messages
+- Multiple scheduled messages
+- Delete scheduled messages
+- Real-time countdown display
+
+## Usage
+
+1. Enter your token
+2. Enter channel ID
+3. Type your message
+4. Set timer duration
+5. Toggle interval for repeating
+6. Add to schedule
 
 **Requirements**: Android 7.0+
 
