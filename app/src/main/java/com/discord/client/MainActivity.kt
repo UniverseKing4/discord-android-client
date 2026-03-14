@@ -1,5 +1,6 @@
 package com.discord.client
 
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -10,10 +11,11 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var masterBtn: Button
+    private lateinit var masterBtn: FloatingActionButton
     private lateinit var tokenInput: EditText
     private lateinit var channelInput: EditText
     private lateinit var messageInput: EditText
@@ -105,27 +107,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMasterButton() {
-        val drawable = GradientDrawable()
-        drawable.shape = GradientDrawable.OVAL
-        masterBtn.background = drawable
-        masterBtn.setPadding(0, 0, 0, 0)
         updateMasterButton()
     }
 
     private fun updateMasterButton() {
-        masterBtn.post {
-            val drawable = GradientDrawable()
-            drawable.shape = GradientDrawable.OVAL
-            if (isPaused) {
-                drawable.setColor(Color.parseColor("#4CAF50"))
-                masterBtn.text = "START"
-            } else {
-                drawable.setColor(Color.parseColor("#FF5555"))
-                masterBtn.text = "STOP"
-            }
-            masterBtn.background = drawable
-            masterBtn.setTextColor(Color.WHITE)
-            masterBtn.invalidate()
+        if (isPaused) {
+            masterBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#4CAF50"))
+            masterBtn.setImageResource(android.R.drawable.ic_media_play)
+        } else {
+            masterBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FF5555"))
+            masterBtn.setImageResource(android.R.drawable.ic_media_pause)
         }
     }
 

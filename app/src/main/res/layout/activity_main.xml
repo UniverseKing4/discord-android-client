@@ -129,16 +129,14 @@
         </LinearLayout>
     </ScrollView>
 
-    <Button
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/masterBtn"
         android:layout_width="70dp"
         android:layout_height="70dp"
         android:layout_gravity="top|end"
         android:layout_margin="16dp"
         android:text="STOP"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:paddingStart="2dp"
-        android:paddingEnd="2dp"
+        app:fabCustomSize="70dp"
+        app:maxImageSize="40dp"
         android:elevation="8dp"/>
 </FrameLayout>
