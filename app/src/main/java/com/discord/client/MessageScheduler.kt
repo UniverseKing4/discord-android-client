@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 class MessageScheduler(private val api: DiscordApi, private val context: Context) {
     private val scheduled = ConcurrentHashMap<String, ScheduledMessage>()
     private val jobs = ConcurrentHashMap<String, Job>()
+    private val pausedTimes = ConcurrentHashMap<String, Long>()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var updateCallback: (() -> Unit)? = null
     private val storage = Storage(context)
@@ -65,8 +66,7 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
         jobs[msg.id]?.cancel()
         jobs.remove(msg.id)
         
-        val delay = (msg.nextRunTime - System.currentTimeMillis()) / 1000
-        if (delay < 0) return
+        val delay = maxOf(1, (msg.nextRunTime - System.currentTimeMillis()) / 1000)
 
         val data = Data.Builder()
             .putString("token", msg.token)
@@ -139,6 +139,7 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
         scheduled.remove(id)
         jobs[id]?.cancel()
         jobs.remove(id)
+        pausedTimes.remove(id)
         WorkManager.getInstance(context).cancelUniqueWork(id)
         updateCallback?.invoke()
     }
@@ -150,11 +151,17 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
         }
         scheduled.clear()
         jobs.clear()
+        pausedTimes.clear()
         scope.cancel()
     }
 
     fun pauseAll() {
+        val currentTime = System.currentTimeMillis()
         scheduled.keys.forEach { id ->
+            val msg = scheduled[id]
+            if (msg != null) {
+                pausedTimes[id] = msg.nextRunTime - currentTime
+            }
             jobs[id]?.cancel()
             jobs.remove(id)
             WorkManager.getInstance(context).cancelUniqueWork(id)
@@ -163,6 +170,15 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     }
 
     fun resumeAll(onResult: (Boolean, String?) -> Unit) {
+        val currentTime = System.currentTimeMillis()
+        scheduled.values.forEach { msg ->
+            val remainingTime = pausedTimes[msg.id]
+            if (remainingTime != null && remainingTime > 0) {
+                msg.nextRunTime = currentTime + remainingTime
+            }
+        }
+        pausedTimes.clear()
+        
         if (storage.getBackgroundEnabled()) {
             scheduled.values.forEach { scheduleWithWorkManager(it) }
         } else {
