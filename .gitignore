@@ -18,3 +18,4 @@ out/
 release/
 save
 test
+monitor_build.sh
