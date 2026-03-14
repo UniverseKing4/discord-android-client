@@ -6,9 +6,11 @@ Android app to schedule Discord messages with timers and intervals.
 
 - Schedule messages with custom timers (hours, minutes, seconds)
 - Interval mode for repeating messages
+- Background mode - messages send even when app is closed
 - Multiple scheduled messages
 - Delete scheduled messages
 - Real-time countdown display
+- Persistent storage across app restarts
 
 ## Usage
 
@@ -17,7 +19,8 @@ Android app to schedule Discord messages with timers and intervals.
 3. Type your message
 4. Set timer duration
 5. Toggle interval for repeating
-6. Add to schedule
+6. Toggle background mode to enable sending when app is closed
+7. Add to schedule
 
 **Requirements**: Android 7.0+
 
