@@ -1,6 +1,8 @@
 package com.discord.client
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var intervalToggle: CheckBox
     private lateinit var scheduledList: RecyclerView
     private lateinit var adapter: ScheduledMessageAdapter
+    private lateinit var storage: Storage
     private val api = DiscordApi()
     private val scheduler = MessageScheduler(api)
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -25,6 +28,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
         setContentView(R.layout.activity_main)
+        
+        storage = Storage(this)
         
         tokenInput = findViewById(R.id.tokenInput)
         channelInput = findViewById(R.id.channelInput)
@@ -35,8 +40,14 @@ class MainActivity : AppCompatActivity() {
         intervalToggle = findViewById(R.id.intervalToggle)
         scheduledList = findViewById(R.id.scheduledList)
         
+        loadSavedData()
+        setupTextWatchers()
+        
         adapter = ScheduledMessageAdapter(
-            onDelete = { scheduler.cancel(it) },
+            onDelete = { 
+                scheduler.cancel(it)
+                saveScheduled()
+            },
             onUpdate = { updateList() }
         )
         scheduledList.layoutManager = LinearLayoutManager(this)
@@ -44,7 +55,76 @@ class MainActivity : AppCompatActivity() {
         
         findViewById<Button>(R.id.addBtn).setOnClickListener { addScheduledMessage() }
         
-        scheduler.setUpdateCallback { updateList() }
+        scheduler.setUpdateCallback { 
+            updateList()
+            saveScheduled()
+        }
+        
+        restoreScheduled()
+    }
+
+    private fun loadSavedData() {
+        tokenInput.setText(storage.getToken())
+        channelInput.setText(storage.getChannelId())
+        messageInput.setText(storage.getMessage())
+        hoursInput.setText(storage.getHours())
+        minutesInput.setText(storage.getMinutes())
+        secondsInput.setText(storage.getSeconds())
+        intervalToggle.isChecked = storage.getInterval()
+    }
+
+    private fun setupTextWatchers() {
+        tokenInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { storage.saveToken(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        
+        channelInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { storage.saveChannelId(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        
+        messageInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { storage.saveMessage(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        
+        hoursInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { storage.saveHours(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        
+        minutesInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { storage.saveMinutes(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        
+        secondsInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { storage.saveSeconds(s.toString()) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        
+        intervalToggle.setOnCheckedChangeListener { _, isChecked -> storage.saveInterval(isChecked) }
+    }
+
+    private fun restoreScheduled() {
+        val saved = storage.getScheduled()
+        for (msg in saved) {
+            scheduler.scheduleRestored(msg) { success, error ->
+                scope.launch {
+                    if (!success) {
+                        Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        updateList()
     }
 
     private fun addScheduledMessage() {
@@ -76,11 +156,9 @@ class MainActivity : AppCompatActivity() {
         }
         
         messageInput.setText("")
-        hoursInput.setText("")
-        minutesInput.setText("")
-        secondsInput.setText("")
-        intervalToggle.isChecked = false
+        storage.saveMessage("")
         updateList()
+        saveScheduled()
     }
 
     private fun updateList() {
@@ -89,9 +167,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveScheduled() {
+        storage.saveScheduled(scheduler.getScheduled())
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        scheduler.cancelAll()
+        saveScheduled()
         scope.cancel()
     }
 }

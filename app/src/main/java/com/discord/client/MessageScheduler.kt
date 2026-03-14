@@ -30,16 +30,30 @@ class MessageScheduler(private val api: DiscordApi) {
         )
         
         scheduled[id] = scheduledMsg
-        
+        startSchedule(id, onResult)
+        updateCallback?.invoke()
+    }
+
+    fun scheduleRestored(msg: ScheduledMessage, onResult: (Boolean, String?) -> Unit) {
+        scheduled[msg.id] = msg
+        startSchedule(msg.id, onResult)
+    }
+
+    private fun startSchedule(id: String, onResult: (Boolean, String?) -> Unit) {
         scope.launch {
             while (scheduled.containsKey(id) && scheduled[id]?.isActive == true) {
-                delay(delaySeconds * 1000)
+                val msg = scheduled[id] ?: break
+                val waitTime = msg.nextRunTime - System.currentTimeMillis()
+                
+                if (waitTime > 0) {
+                    delay(waitTime)
+                }
                 
                 try {
-                    api.sendMessage(token, channelId, message)
+                    api.sendMessage(msg.token, msg.channelId, msg.message)
                     
-                    if (isInterval) {
-                        scheduled[id]?.nextRunTime = System.currentTimeMillis() + (delaySeconds * 1000)
+                    if (msg.isInterval) {
+                        scheduled[id]?.nextRunTime = System.currentTimeMillis() + (msg.delaySeconds * 1000)
                         withContext(Dispatchers.Main) { updateCallback?.invoke() }
                     } else {
                         scheduled.remove(id)
@@ -50,7 +64,7 @@ class MessageScheduler(private val api: DiscordApi) {
                     withContext(Dispatchers.Main) {
                         onResult(false, e.message)
                     }
-                    if (!isInterval) {
+                    if (!msg.isInterval) {
                         scheduled.remove(id)
                         withContext(Dispatchers.Main) { updateCallback?.invoke() }
                         break
@@ -58,8 +72,6 @@ class MessageScheduler(private val api: DiscordApi) {
                 }
             }
         }
-        
-        updateCallback?.invoke()
     }
 
     fun cancel(id: String) {
