@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMasterButton() {
+        masterBtn.setPadding(0, 0, 0, 0)
         updateMasterButton()
     }
 
