@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var secondsInput: EditText
     private lateinit var intervalToggle: CheckBox
     private lateinit var backgroundToggle: CheckBox
+    private lateinit var notificationToggle: CheckBox
     private lateinit var scheduledList: RecyclerView
     private lateinit var adapter: ScheduledMessageAdapter
     private lateinit var storage: Storage
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         secondsInput = findViewById(R.id.secondsInput)
         intervalToggle = findViewById(R.id.intervalToggle)
         backgroundToggle = findViewById(R.id.backgroundToggle)
+        notificationToggle = findViewById(R.id.notificationToggle)
         scheduledList = findViewById(R.id.scheduledList)
         
         loadSavedData()
@@ -89,6 +91,10 @@ class MainActivity : AppCompatActivity() {
             updateList()
         }
         
+        notificationToggle.setOnCheckedChangeListener { _, isChecked ->
+            storage.saveNotificationsEnabled(isChecked)
+        }
+        
         scheduler.setUpdateCallback { 
             updateList()
             saveScheduled()
@@ -128,7 +134,9 @@ class MainActivity : AppCompatActivity() {
         secondsInput.setText(storage.getSeconds())
         intervalToggle.isChecked = storage.getInterval()
         backgroundToggle.isChecked = storage.getBackgroundEnabled()
+        notificationToggle.isChecked = storage.getNotificationsEnabled()
         isPaused = !storage.getMasterEnabled()
+        updateMasterButton()
     }
 
     private fun setupTextWatchers() {

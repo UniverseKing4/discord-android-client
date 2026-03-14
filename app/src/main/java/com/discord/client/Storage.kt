@@ -51,4 +51,7 @@ class Storage(context: Context) {
 
     fun saveMasterEnabled(enabled: Boolean) = prefs.edit().putBoolean("master_enabled", enabled).apply()
     fun getMasterEnabled(): Boolean = prefs.getBoolean("master_enabled", true)
+
+    fun saveNotificationsEnabled(enabled: Boolean) = prefs.edit().putBoolean("notifications_enabled", enabled).apply()
+    fun getNotificationsEnabled(): Boolean = prefs.getBoolean("notifications_enabled", false)
 }
