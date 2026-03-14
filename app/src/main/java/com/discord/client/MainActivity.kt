@@ -1,8 +1,11 @@
 package com.discord.client
 
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Gravity
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -10,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var masterToggle: Switch
+    private lateinit var masterBtn: Button
     private lateinit var tokenInput: EditText
     private lateinit var channelInput: EditText
     private lateinit var messageInput: EditText
@@ -35,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         storage = Storage(this)
         scheduler = MessageScheduler(api, this)
         
-        masterToggle = findViewById(R.id.masterToggle)
+        masterBtn = findViewById(R.id.masterBtn)
         tokenInput = findViewById(R.id.tokenInput)
         channelInput = findViewById(R.id.channelInput)
         messageInput = findViewById(R.id.messageInput)
@@ -48,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         
         loadSavedData()
         setupTextWatchers()
+        setupMasterButton()
         
         adapter = ScheduledMessageAdapter(
             onDelete = { 
@@ -55,21 +59,23 @@ class MainActivity : AppCompatActivity() {
                 saveScheduled()
             },
             onUpdate = { updateList() },
-            isPaused = { isPaused }
+            isPaused = { isPaused },
+            getStorage = { storage }
         )
         scheduledList.layoutManager = LinearLayoutManager(this)
         scheduledList.adapter = adapter
         
         findViewById<Button>(R.id.addBtn).setOnClickListener { addScheduledMessage() }
         
-        masterToggle.setOnCheckedChangeListener { _, isChecked ->
-            isPaused = !isChecked
-            storage.saveMasterEnabled(isChecked)
-            if (isChecked) {
+        masterBtn.setOnClickListener {
+            isPaused = !isPaused
+            storage.saveMasterEnabled(!isPaused)
+            if (!isPaused) {
                 scheduler.resumeAll { _, _ -> }
             } else {
                 scheduler.pauseAll()
             }
+            updateMasterButton()
             updateList()
         }
         
@@ -80,6 +86,7 @@ class MainActivity : AppCompatActivity() {
             } else if (!isPaused) {
                 scheduler.switchToForeground { _, _ -> }
             }
+            updateList()
         }
         
         scheduler.setUpdateCallback { 
@@ -88,6 +95,26 @@ class MainActivity : AppCompatActivity() {
         }
         
         restoreScheduled()
+    }
+
+    private fun setupMasterButton() {
+        val drawable = GradientDrawable()
+        drawable.shape = GradientDrawable.OVAL
+        masterBtn.background = drawable
+        updateMasterButton()
+    }
+
+    private fun updateMasterButton() {
+        val drawable = masterBtn.background as GradientDrawable
+        if (isPaused) {
+            drawable.setColor(Color.parseColor("#4CAF50"))
+            masterBtn.text = "START"
+            masterBtn.setTextColor(Color.WHITE)
+        } else {
+            drawable.setColor(Color.parseColor("#FF5555"))
+            masterBtn.text = "STOP"
+            masterBtn.setTextColor(Color.WHITE)
+        }
     }
 
     private fun loadSavedData() {
@@ -99,8 +126,7 @@ class MainActivity : AppCompatActivity() {
         secondsInput.setText(storage.getSeconds())
         intervalToggle.isChecked = storage.getInterval()
         backgroundToggle.isChecked = storage.getBackgroundEnabled()
-        masterToggle.isChecked = storage.getMasterEnabled()
-        isPaused = !masterToggle.isChecked
+        isPaused = !storage.getMasterEnabled()
     }
 
     private fun setupTextWatchers() {

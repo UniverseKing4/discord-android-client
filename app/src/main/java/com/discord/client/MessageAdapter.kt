@@ -13,7 +13,8 @@ import kotlinx.coroutines.*
 class ScheduledMessageAdapter(
     private val onDelete: (String) -> Unit,
     private val onUpdate: () -> Unit,
-    private val isPaused: () -> Boolean
+    private val isPaused: () -> Boolean,
+    private val getStorage: () -> Storage
 ) : RecyclerView.Adapter<ScheduledMessageAdapter.ViewHolder>() {
     private var messages = listOf<ScheduledMessage>()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -63,6 +64,7 @@ class ScheduledMessageAdapter(
     }
     
     private fun updateTimeDisplay(holder: ViewHolder, msg: ScheduledMessage) {
+        val storage = getStorage()
         val timeRemaining = maxOf(0, (msg.nextRunTime - System.currentTimeMillis()) / 1000)
         val hours = timeRemaining / 3600
         val minutes = (timeRemaining % 3600) / 60
@@ -70,10 +72,18 @@ class ScheduledMessageAdapter(
         
         val timeStr = if (isPaused()) {
             "⏸ PAUSED"
-        } else if (msg.isInterval) {
-            "🔁 Every ${formatTime(msg.delaySeconds)} (Next: ${hours}h ${minutes}m ${seconds}s)"
+        } else if (storage.getBackgroundEnabled()) {
+            if (msg.isInterval) {
+                "🔁 Every ${formatTime(msg.delaySeconds)} (Next: ${hours}h ${minutes}m ${seconds}s) [BG]"
+            } else {
+                "⏱ In ${hours}h ${minutes}m ${seconds}s [BG]"
+            }
         } else {
-            "⏱ In ${hours}h ${minutes}m ${seconds}s"
+            if (msg.isInterval) {
+                "🔁 Every ${formatTime(msg.delaySeconds)} (Next: ${hours}h ${minutes}m ${seconds}s)"
+            } else {
+                "⏱ In ${hours}h ${minutes}m ${seconds}s"
+            }
         }
         
         holder.timeText.text = timeStr
