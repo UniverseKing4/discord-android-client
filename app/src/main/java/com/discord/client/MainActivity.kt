@@ -72,10 +72,7 @@ class MainActivity : AppCompatActivity() {
         masterBtn.setOnClickListener {
             isPaused = !isPaused
             storage.saveMasterEnabled(!isPaused)
-            
-            runOnUiThread {
-                updateMasterButton()
-            }
+            updateMasterButton()
             
             if (!isPaused) {
                 scheduler.resumeAll { _, _ -> }
@@ -116,17 +113,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateMasterButton() {
-        val drawable = GradientDrawable()
-        drawable.shape = GradientDrawable.OVAL
-        if (isPaused) {
-            drawable.setColor(Color.parseColor("#4CAF50"))
-            masterBtn.text = "START"
-        } else {
-            drawable.setColor(Color.parseColor("#FF5555"))
-            masterBtn.text = "STOP"
+        masterBtn.post {
+            val drawable = GradientDrawable()
+            drawable.shape = GradientDrawable.OVAL
+            if (isPaused) {
+                drawable.setColor(Color.parseColor("#4CAF50"))
+                masterBtn.text = "START"
+            } else {
+                drawable.setColor(Color.parseColor("#FF5555"))
+                masterBtn.text = "STOP"
+            }
+            masterBtn.background = drawable
+            masterBtn.setTextColor(Color.WHITE)
+            masterBtn.invalidate()
         }
-        masterBtn.background = drawable
-        masterBtn.setTextColor(Color.WHITE)
     }
 
     private fun loadSavedData() {
