@@ -72,12 +72,16 @@ class MainActivity : AppCompatActivity() {
         masterBtn.setOnClickListener {
             isPaused = !isPaused
             storage.saveMasterEnabled(!isPaused)
+            
+            runOnUiThread {
+                updateMasterButton()
+            }
+            
             if (!isPaused) {
                 scheduler.resumeAll { _, _ -> }
             } else {
                 scheduler.pauseAll()
             }
-            updateMasterButton()
             updateList()
         }
         

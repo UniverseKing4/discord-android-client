@@ -58,8 +58,21 @@ class ScheduledMessageAdapter(
     override fun getItemCount() = messages.size
 
     fun setMessages(newMessages: List<ScheduledMessage>) {
+        val oldMessages = messages
         messages = newMessages
-        notifyDataSetChanged()
+        
+        if (oldMessages.size != newMessages.size) {
+            notifyDataSetChanged()
+        } else {
+            for (i in newMessages.indices) {
+                if (oldMessages.getOrNull(i)?.isInterval != newMessages[i].isInterval ||
+                    oldMessages.getOrNull(i)?.message != newMessages[i].message ||
+                    oldMessages.getOrNull(i)?.channelId != newMessages[i].channelId) {
+                    notifyItemChanged(i)
+                }
+            }
+        }
+        
         startRealtimeUpdates()
     }
     

@@ -77,7 +77,7 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         notificationManager.createNotificationChannel(channel)
         
         val title = if (success) "✓ Message Sent" else "✗ Message Failed"
-        val text = "Channel: $channelId\n${message.take(50)}${if (message.length > 50) "..." else ""}"
+        val text = "${message.take(50)}${if (message.length > 50) "..." else ""}\nChannel: $channelId"
         
         val notification = NotificationCompat.Builder(applicationContext, "message_channel")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
