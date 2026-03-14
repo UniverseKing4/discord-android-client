@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 
 class MessageScheduler(private val api: DiscordApi, private val context: Context) {
     private val scheduled = ConcurrentHashMap<String, ScheduledMessage>()
+    private val jobs = ConcurrentHashMap<String, Job>()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var updateCallback: (() -> Unit)? = null
     private val storage = Storage(context)
@@ -55,6 +56,9 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     }
 
     private fun scheduleWithWorkManager(msg: ScheduledMessage) {
+        jobs[msg.id]?.cancel()
+        jobs.remove(msg.id)
+        
         val delay = (msg.nextRunTime - System.currentTimeMillis()) / 1000
         if (delay < 0) return
 
@@ -81,7 +85,9 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     }
 
     private fun startSchedule(id: String, onResult: (Boolean, String?) -> Unit) {
-        scope.launch {
+        jobs[id]?.cancel()
+        
+        val job = scope.launch {
             while (scheduled.containsKey(id) && scheduled[id]?.isActive == true) {
                 val msg = scheduled[id] ?: break
                 val waitTime = msg.nextRunTime - System.currentTimeMillis()
@@ -90,40 +96,54 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
                     delay(waitTime)
                 }
                 
-                try {
-                    api.sendMessage(msg.token, msg.channelId, msg.message)
-                    
-                    if (msg.isInterval) {
-                        scheduled[id]?.nextRunTime = System.currentTimeMillis() + (msg.delaySeconds * 1000)
-                        withContext(Dispatchers.Main) { updateCallback?.invoke() }
-                    } else {
-                        scheduled.remove(id)
-                        withContext(Dispatchers.Main) { updateCallback?.invoke() }
-                        break
+                if (!storage.getBackgroundEnabled()) {
+                    try {
+                        api.sendMessage(msg.token, msg.channelId, msg.message)
+                        
+                        if (msg.isInterval) {
+                            scheduled[id]?.nextRunTime = System.currentTimeMillis() + (msg.delaySeconds * 1000)
+                            withContext(Dispatchers.Main) { updateCallback?.invoke() }
+                        } else {
+                            scheduled.remove(id)
+                            jobs.remove(id)
+                            withContext(Dispatchers.Main) { updateCallback?.invoke() }
+                            break
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            onResult(false, e.message)
+                        }
+                        if (!msg.isInterval) {
+                            scheduled.remove(id)
+                            jobs.remove(id)
+                            withContext(Dispatchers.Main) { updateCallback?.invoke() }
+                            break
+                        }
                     }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        onResult(false, e.message)
-                    }
-                    if (!msg.isInterval) {
-                        scheduled.remove(id)
-                        withContext(Dispatchers.Main) { updateCallback?.invoke() }
-                        break
-                    }
+                } else {
+                    break
                 }
             }
         }
+        
+        jobs[id] = job
     }
 
     fun cancel(id: String) {
         scheduled.remove(id)
+        jobs[id]?.cancel()
+        jobs.remove(id)
         WorkManager.getInstance(context).cancelUniqueWork(id)
         updateCallback?.invoke()
     }
 
     fun cancelAll() {
-        scheduled.keys.forEach { WorkManager.getInstance(context).cancelUniqueWork(it) }
+        scheduled.keys.forEach { 
+            jobs[it]?.cancel()
+            WorkManager.getInstance(context).cancelUniqueWork(it) 
+        }
         scheduled.clear()
+        jobs.clear()
         scope.cancel()
     }
 
@@ -136,6 +156,10 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     }
 
     fun switchToBackground() {
+        scheduled.keys.forEach { id ->
+            jobs[id]?.cancel()
+            jobs.remove(id)
+        }
         scheduled.values.forEach { scheduleWithWorkManager(it) }
     }
 

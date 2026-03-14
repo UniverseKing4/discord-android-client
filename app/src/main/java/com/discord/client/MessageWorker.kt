@@ -8,6 +8,12 @@ import java.util.concurrent.TimeUnit
 
 class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val storage = Storage(applicationContext)
+        
+        if (!storage.getBackgroundEnabled()) {
+            return@withContext Result.success()
+        }
+        
         val token = inputData.getString("token") ?: return@withContext Result.failure()
         val channelId = inputData.getString("channelId") ?: return@withContext Result.failure()
         val message = inputData.getString("message") ?: return@withContext Result.failure()
@@ -18,24 +24,27 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         try {
             DiscordApi().sendMessage(token, channelId, message)
             
-            if (isInterval) {
+            if (isInterval && storage.getBackgroundEnabled()) {
                 scheduleNext(token, channelId, message, delaySeconds, messageId)
             } else {
-                Storage(applicationContext).removeScheduledMessage(messageId)
+                storage.removeScheduledMessage(messageId)
             }
             
             Result.success()
         } catch (e: Exception) {
-            if (isInterval) {
+            if (isInterval && storage.getBackgroundEnabled()) {
                 scheduleNext(token, channelId, message, delaySeconds, messageId)
             } else {
-                Storage(applicationContext).removeScheduledMessage(messageId)
+                storage.removeScheduledMessage(messageId)
             }
             Result.failure()
         }
     }
 
     private fun scheduleNext(token: String, channelId: String, message: String, delaySeconds: Long, messageId: String) {
+        val storage = Storage(applicationContext)
+        if (!storage.getBackgroundEnabled()) return
+        
         val data = Data.Builder()
             .putString("token", token)
             .putString("channelId", channelId)
