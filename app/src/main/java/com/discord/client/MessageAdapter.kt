@@ -114,24 +114,14 @@ class ScheduledMessageAdapter(
                 val storage = getStorage()
                 val savedMessages = storage.getScheduled()
                 
-                var needsUpdate = false
                 messages.forEachIndexed { index, msg ->
                     val savedMsg = savedMessages.find { it.id == msg.id }
                     if (savedMsg != null) {
-                        if (msg.nextRunTime != savedMsg.nextRunTime ||
-                            msg.isInterval != savedMsg.isInterval ||
-                            msg.message != savedMsg.message ||
-                            msg.channelId != savedMsg.channelId) {
-                            msg.nextRunTime = savedMsg.nextRunTime
-                            msg.isInterval = savedMsg.isInterval
-                            needsUpdate = true
-                        }
+                        msg.nextRunTime = savedMsg.nextRunTime
                     }
                 }
                 
-                if (needsUpdate || messages.isNotEmpty()) {
-                    notifyDataSetChanged()
-                }
+                notifyDataSetChanged()
             }
         }
     }
