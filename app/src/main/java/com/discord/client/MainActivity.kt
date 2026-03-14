@@ -105,27 +105,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMasterButton() {
-        val drawable = GradientDrawable()
-        drawable.shape = GradientDrawable.OVAL
-        masterBtn.background = drawable
-        masterBtn.setPadding(0, 0, 0, 0)
         updateMasterButton()
     }
 
     private fun updateMasterButton() {
         masterBtn.post {
-            val drawable = GradientDrawable()
-            drawable.shape = GradientDrawable.OVAL
             if (isPaused) {
-                drawable.setColor(Color.parseColor("#4CAF50"))
+                masterBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
                 masterBtn.text = "START"
             } else {
-                drawable.setColor(Color.parseColor("#FF5555"))
+                masterBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FF5555"))
                 masterBtn.text = "STOP"
             }
-            masterBtn.background = drawable
             masterBtn.setTextColor(Color.WHITE)
-            masterBtn.invalidate()
         }
     }
 

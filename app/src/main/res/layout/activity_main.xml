@@ -140,5 +140,8 @@
         android:textStyle="bold"
         android:paddingStart="2dp"
         android:paddingEnd="2dp"
-        android:elevation="8dp"/>
+        android:elevation="8dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="35dp"/>
 </FrameLayout>
