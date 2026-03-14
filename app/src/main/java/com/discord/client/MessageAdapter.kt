@@ -65,7 +65,11 @@ class ScheduledMessageAdapter(
     
     private fun updateTimeDisplay(holder: ViewHolder, msg: ScheduledMessage) {
         val storage = getStorage()
-        val timeRemaining = maxOf(0, (msg.nextRunTime - System.currentTimeMillis()) / 1000)
+        val savedMessages = storage.getScheduled()
+        val savedMsg = savedMessages.find { it.id == msg.id }
+        val nextTime = savedMsg?.nextRunTime ?: msg.nextRunTime
+        
+        val timeRemaining = maxOf(0, (nextTime - System.currentTimeMillis()) / 1000)
         val hours = timeRemaining / 3600
         val minutes = (timeRemaining % 3600) / 60
         val seconds = timeRemaining % 60
@@ -94,6 +98,14 @@ class ScheduledMessageAdapter(
         updateJob = scope.launch {
             while (isActive) {
                 delay(1000)
+                val storage = getStorage()
+                val savedMessages = storage.getScheduled()
+                messages.forEach { msg ->
+                    val savedMsg = savedMessages.find { it.id == msg.id }
+                    if (savedMsg != null) {
+                        msg.nextRunTime = savedMsg.nextRunTime
+                    }
+                }
                 notifyDataSetChanged()
             }
         }

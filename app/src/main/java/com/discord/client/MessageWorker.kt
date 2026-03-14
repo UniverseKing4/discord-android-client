@@ -25,6 +25,12 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             DiscordApi().sendMessage(token, channelId, message)
             
             if (isInterval && storage.getBackgroundEnabled() && storage.getMasterEnabled()) {
+                val messages = storage.getScheduled().toMutableList()
+                val msgIndex = messages.indexOfFirst { it.id == messageId }
+                if (msgIndex >= 0) {
+                    messages[msgIndex].nextRunTime = System.currentTimeMillis() + (delaySeconds * 1000)
+                    storage.saveScheduled(messages)
+                }
                 scheduleNext(token, channelId, message, delaySeconds, messageId)
             } else {
                 storage.removeScheduledMessage(messageId)
@@ -33,6 +39,12 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             Result.success()
         } catch (e: Exception) {
             if (isInterval && storage.getBackgroundEnabled() && storage.getMasterEnabled()) {
+                val messages = storage.getScheduled().toMutableList()
+                val msgIndex = messages.indexOfFirst { it.id == messageId }
+                if (msgIndex >= 0) {
+                    messages[msgIndex].nextRunTime = System.currentTimeMillis() + (delaySeconds * 1000)
+                    storage.saveScheduled(messages)
+                }
                 scheduleNext(token, channelId, message, delaySeconds, messageId)
             } else {
                 storage.removeScheduledMessage(messageId)

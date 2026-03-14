@@ -132,5 +132,8 @@
         android:text="STOP"
         android:textSize="11sp"
         android:textStyle="bold"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:ellipsize="none"
         android:elevation="8dp"/>
 </FrameLayout>
