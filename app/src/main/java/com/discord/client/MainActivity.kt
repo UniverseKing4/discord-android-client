@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var masterToggle: Switch
     private lateinit var tokenInput: EditText
     private lateinit var channelInput: EditText
     private lateinit var messageInput: EditText
@@ -24,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private val api = DiscordApi()
     private lateinit var scheduler: MessageScheduler
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var isPaused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         storage = Storage(this)
         scheduler = MessageScheduler(api, this)
         
+        masterToggle = findViewById(R.id.masterToggle)
         tokenInput = findViewById(R.id.tokenInput)
         channelInput = findViewById(R.id.channelInput)
         messageInput = findViewById(R.id.messageInput)
@@ -51,18 +54,30 @@ class MainActivity : AppCompatActivity() {
                 scheduler.cancel(it)
                 saveScheduled()
             },
-            onUpdate = { updateList() }
+            onUpdate = { updateList() },
+            isPaused = { isPaused }
         )
         scheduledList.layoutManager = LinearLayoutManager(this)
         scheduledList.adapter = adapter
         
         findViewById<Button>(R.id.addBtn).setOnClickListener { addScheduledMessage() }
         
+        masterToggle.setOnCheckedChangeListener { _, isChecked ->
+            isPaused = !isChecked
+            storage.saveMasterEnabled(isChecked)
+            if (isChecked) {
+                scheduler.resumeAll { _, _ -> }
+            } else {
+                scheduler.pauseAll()
+            }
+            updateList()
+        }
+        
         backgroundToggle.setOnCheckedChangeListener { _, isChecked ->
             storage.saveBackgroundEnabled(isChecked)
-            if (isChecked) {
+            if (isChecked && !isPaused) {
                 scheduler.switchToBackground()
-            } else {
+            } else if (!isPaused) {
                 scheduler.switchToForeground { _, _ -> }
             }
         }
@@ -84,6 +99,8 @@ class MainActivity : AppCompatActivity() {
         secondsInput.setText(storage.getSeconds())
         intervalToggle.isChecked = storage.getInterval()
         backgroundToggle.isChecked = storage.getBackgroundEnabled()
+        masterToggle.isChecked = storage.getMasterEnabled()
+        isPaused = !masterToggle.isChecked
     }
 
     private fun setupTextWatchers() {
@@ -131,19 +148,24 @@ class MainActivity : AppCompatActivity() {
         for (msg in saved) {
             scheduler.scheduleRestored(msg) { success, error ->
                 scope.launch {
-                    if (!success) {
+                    if (!success && error != null) {
                         Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
+        
+        if (isPaused) {
+            scheduler.pauseAll()
+        }
+        
         updateList()
     }
 
     private fun addScheduledMessage() {
-        val token = tokenInput.text.toString()
-        val channelId = channelInput.text.toString()
-        val message = messageInput.text.toString()
+        val token = tokenInput.text.toString().trim()
+        val channelId = channelInput.text.toString().trim()
+        val message = messageInput.text.toString().trim()
         val hours = hoursInput.text.toString().toLongOrNull() ?: 0
         val minutes = minutesInput.text.toString().toLongOrNull() ?: 0
         val seconds = secondsInput.text.toString().toLongOrNull() ?: 0
@@ -162,7 +184,7 @@ class MainActivity : AppCompatActivity() {
         
         scheduler.schedule(token, channelId, message, totalSeconds, isInterval) { success, error ->
             scope.launch {
-                if (!success) {
+                if (!success && error != null) {
                     Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_SHORT).show()
                 }
             }

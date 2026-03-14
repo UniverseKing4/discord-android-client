@@ -48,4 +48,7 @@ class Storage(context: Context) {
 
     fun saveBackgroundEnabled(enabled: Boolean) = prefs.edit().putBoolean("background_enabled", enabled).apply()
     fun getBackgroundEnabled(): Boolean = prefs.getBoolean("background_enabled", false)
+
+    fun saveMasterEnabled(enabled: Boolean) = prefs.edit().putBoolean("master_enabled", enabled).apply()
+    fun getMasterEnabled(): Boolean = prefs.getBoolean("master_enabled", true)
 }

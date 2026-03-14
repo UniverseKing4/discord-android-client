@@ -12,7 +12,8 @@ import kotlinx.coroutines.*
 
 class ScheduledMessageAdapter(
     private val onDelete: (String) -> Unit,
-    private val onUpdate: () -> Unit
+    private val onUpdate: () -> Unit,
+    private val isPaused: () -> Boolean
 ) : RecyclerView.Adapter<ScheduledMessageAdapter.ViewHolder>() {
     private var messages = listOf<ScheduledMessage>()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -20,6 +21,7 @@ class ScheduledMessageAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val messageText: TextView = view.findViewById(R.id.messageText)
+        val channelText: TextView = view.findViewById(R.id.channelText)
         val timeText: TextView = view.findViewById(R.id.timeText)
         val deleteBtn: Button = view.findViewById(R.id.deleteBtn)
     }
@@ -33,7 +35,9 @@ class ScheduledMessageAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val msg = messages[position]
         holder.messageText.text = msg.message
+        holder.channelText.text = "Channel: ${msg.channelId}"
         holder.deleteBtn.setBackgroundColor(Color.parseColor("#FF5555"))
+        holder.deleteBtn.setTextColor(Color.WHITE)
         
         updateTimeDisplay(holder, msg)
         
@@ -59,15 +63,17 @@ class ScheduledMessageAdapter(
     }
     
     private fun updateTimeDisplay(holder: ViewHolder, msg: ScheduledMessage) {
-        val timeRemaining = (msg.nextRunTime - System.currentTimeMillis()) / 1000
+        val timeRemaining = maxOf(0, (msg.nextRunTime - System.currentTimeMillis()) / 1000)
         val hours = timeRemaining / 3600
         val minutes = (timeRemaining % 3600) / 60
         val seconds = timeRemaining % 60
         
-        val timeStr = if (msg.isInterval) {
-            "Every ${formatTime(msg.delaySeconds)} (Next: ${hours}h ${minutes}m ${seconds}s)"
+        val timeStr = if (isPaused()) {
+            "⏸ PAUSED"
+        } else if (msg.isInterval) {
+            "🔁 Every ${formatTime(msg.delaySeconds)} (Next: ${hours}h ${minutes}m ${seconds}s)"
         } else {
-            "In ${hours}h ${minutes}m ${seconds}s"
+            "⏱ In ${hours}h ${minutes}m ${seconds}s"
         }
         
         holder.timeText.text = timeStr

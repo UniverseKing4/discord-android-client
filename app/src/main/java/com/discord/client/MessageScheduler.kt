@@ -36,10 +36,12 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
         
         scheduled[id] = scheduledMsg
         
-        if (storage.getBackgroundEnabled()) {
-            scheduleWithWorkManager(scheduledMsg)
-        } else {
-            startSchedule(id, onResult)
+        if (storage.getMasterEnabled()) {
+            if (storage.getBackgroundEnabled()) {
+                scheduleWithWorkManager(scheduledMsg)
+            } else {
+                startSchedule(id, onResult)
+            }
         }
         
         updateCallback?.invoke()
@@ -48,14 +50,18 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     fun scheduleRestored(msg: ScheduledMessage, onResult: (Boolean, String?) -> Unit) {
         scheduled[msg.id] = msg
         
-        if (storage.getBackgroundEnabled()) {
-            scheduleWithWorkManager(msg)
-        } else {
-            startSchedule(msg.id, onResult)
+        if (storage.getMasterEnabled()) {
+            if (storage.getBackgroundEnabled()) {
+                scheduleWithWorkManager(msg)
+            } else {
+                startSchedule(msg.id, onResult)
+            }
         }
     }
 
     private fun scheduleWithWorkManager(msg: ScheduledMessage) {
+        if (!storage.getMasterEnabled()) return
+        
         jobs[msg.id]?.cancel()
         jobs.remove(msg.id)
         
@@ -96,7 +102,7 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
                     delay(waitTime)
                 }
                 
-                if (!storage.getBackgroundEnabled()) {
+                if (!storage.getBackgroundEnabled() && storage.getMasterEnabled()) {
                     try {
                         api.sendMessage(msg.token, msg.channelId, msg.message)
                         
@@ -147,6 +153,24 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
         scope.cancel()
     }
 
+    fun pauseAll() {
+        scheduled.keys.forEach { id ->
+            jobs[id]?.cancel()
+            jobs.remove(id)
+            WorkManager.getInstance(context).cancelUniqueWork(id)
+        }
+        updateCallback?.invoke()
+    }
+
+    fun resumeAll(onResult: (Boolean, String?) -> Unit) {
+        if (storage.getBackgroundEnabled()) {
+            scheduled.values.forEach { scheduleWithWorkManager(it) }
+        } else {
+            scheduled.values.forEach { startSchedule(it.id, onResult) }
+        }
+        updateCallback?.invoke()
+    }
+
     fun getScheduled(): List<ScheduledMessage> {
         return scheduled.values.toList().sortedBy { it.nextRunTime }
     }
@@ -156,6 +180,7 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     }
 
     fun switchToBackground() {
+        if (!storage.getMasterEnabled()) return
         scheduled.keys.forEach { id ->
             jobs[id]?.cancel()
             jobs.remove(id)
@@ -164,6 +189,7 @@ class MessageScheduler(private val api: DiscordApi, private val context: Context
     }
 
     fun switchToForeground(onResult: (Boolean, String?) -> Unit) {
+        if (!storage.getMasterEnabled()) return
         scheduled.keys.forEach { WorkManager.getInstance(context).cancelUniqueWork(it) }
         scheduled.values.forEach { startSchedule(it.id, onResult) }
     }

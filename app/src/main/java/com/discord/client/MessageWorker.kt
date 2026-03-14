@@ -10,7 +10,7 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val storage = Storage(applicationContext)
         
-        if (!storage.getBackgroundEnabled()) {
+        if (!storage.getBackgroundEnabled() || !storage.getMasterEnabled()) {
             return@withContext Result.success()
         }
         
@@ -24,7 +24,7 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         try {
             DiscordApi().sendMessage(token, channelId, message)
             
-            if (isInterval && storage.getBackgroundEnabled()) {
+            if (isInterval && storage.getBackgroundEnabled() && storage.getMasterEnabled()) {
                 scheduleNext(token, channelId, message, delaySeconds, messageId)
             } else {
                 storage.removeScheduledMessage(messageId)
@@ -32,7 +32,7 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             
             Result.success()
         } catch (e: Exception) {
-            if (isInterval && storage.getBackgroundEnabled()) {
+            if (isInterval && storage.getBackgroundEnabled() && storage.getMasterEnabled()) {
                 scheduleNext(token, channelId, message, delaySeconds, messageId)
             } else {
                 storage.removeScheduledMessage(messageId)
@@ -43,7 +43,7 @@ class MessageWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
     private fun scheduleNext(token: String, channelId: String, message: String, delaySeconds: Long, messageId: String) {
         val storage = Storage(applicationContext)
-        if (!storage.getBackgroundEnabled()) return
+        if (!storage.getBackgroundEnabled() || !storage.getMasterEnabled()) return
         
         val data = Data.Builder()
             .putString("token", token)
