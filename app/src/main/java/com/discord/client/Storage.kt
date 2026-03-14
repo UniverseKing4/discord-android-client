@@ -40,4 +40,12 @@ class Storage(context: Context) {
         val type = object : TypeToken<List<ScheduledMessage>>() {}.type
         return gson.fromJson(json, type)
     }
+
+    fun removeScheduledMessage(messageId: String) {
+        val messages = getScheduled().filter { it.id != messageId }
+        saveScheduled(messages)
+    }
+
+    fun saveBackgroundEnabled(enabled: Boolean) = prefs.edit().putBoolean("background_enabled", enabled).apply()
+    fun getBackgroundEnabled(): Boolean = prefs.getBoolean("background_enabled", false)
 }

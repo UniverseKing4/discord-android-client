@@ -3,11 +3,15 @@ package com.discord.client
 import kotlinx.coroutines.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import androidx.work.*
+import android.content.Context
+import java.util.concurrent.TimeUnit
 
-class MessageScheduler(private val api: DiscordApi) {
+class MessageScheduler(private val api: DiscordApi, private val context: Context) {
     private val scheduled = ConcurrentHashMap<String, ScheduledMessage>()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var updateCallback: (() -> Unit)? = null
+    private val storage = Storage(context)
 
     fun schedule(
         token: String,
@@ -30,13 +34,50 @@ class MessageScheduler(private val api: DiscordApi) {
         )
         
         scheduled[id] = scheduledMsg
-        startSchedule(id, onResult)
+        
+        if (storage.getBackgroundEnabled()) {
+            scheduleWithWorkManager(scheduledMsg)
+        } else {
+            startSchedule(id, onResult)
+        }
+        
         updateCallback?.invoke()
     }
 
     fun scheduleRestored(msg: ScheduledMessage, onResult: (Boolean, String?) -> Unit) {
         scheduled[msg.id] = msg
-        startSchedule(msg.id, onResult)
+        
+        if (storage.getBackgroundEnabled()) {
+            scheduleWithWorkManager(msg)
+        } else {
+            startSchedule(msg.id, onResult)
+        }
+    }
+
+    private fun scheduleWithWorkManager(msg: ScheduledMessage) {
+        val delay = (msg.nextRunTime - System.currentTimeMillis()) / 1000
+        if (delay < 0) return
+
+        val data = Data.Builder()
+            .putString("token", msg.token)
+            .putString("channelId", msg.channelId)
+            .putString("message", msg.message)
+            .putBoolean("isInterval", msg.isInterval)
+            .putLong("delaySeconds", msg.delaySeconds)
+            .putString("messageId", msg.id)
+            .build()
+
+        val work = OneTimeWorkRequestBuilder<MessageWorker>()
+            .setInitialDelay(delay, TimeUnit.SECONDS)
+            .setInputData(data)
+            .addTag(msg.id)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            msg.id,
+            ExistingWorkPolicy.REPLACE,
+            work
+        )
     }
 
     private fun startSchedule(id: String, onResult: (Boolean, String?) -> Unit) {
@@ -76,10 +117,12 @@ class MessageScheduler(private val api: DiscordApi) {
 
     fun cancel(id: String) {
         scheduled.remove(id)
+        WorkManager.getInstance(context).cancelUniqueWork(id)
         updateCallback?.invoke()
     }
 
     fun cancelAll() {
+        scheduled.keys.forEach { WorkManager.getInstance(context).cancelUniqueWork(it) }
         scheduled.clear()
         scope.cancel()
     }
@@ -90,6 +133,15 @@ class MessageScheduler(private val api: DiscordApi) {
 
     fun setUpdateCallback(callback: () -> Unit) {
         updateCallback = callback
+    }
+
+    fun switchToBackground() {
+        scheduled.values.forEach { scheduleWithWorkManager(it) }
+    }
+
+    fun switchToForeground(onResult: (Boolean, String?) -> Unit) {
+        scheduled.keys.forEach { WorkManager.getInstance(context).cancelUniqueWork(it) }
+        scheduled.values.forEach { startSchedule(it.id, onResult) }
     }
 }
 

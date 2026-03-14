@@ -17,11 +17,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var minutesInput: EditText
     private lateinit var secondsInput: EditText
     private lateinit var intervalToggle: CheckBox
+    private lateinit var backgroundToggle: CheckBox
     private lateinit var scheduledList: RecyclerView
     private lateinit var adapter: ScheduledMessageAdapter
     private lateinit var storage: Storage
     private val api = DiscordApi()
-    private val scheduler = MessageScheduler(api)
+    private lateinit var scheduler: MessageScheduler
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +31,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         
         storage = Storage(this)
+        scheduler = MessageScheduler(api, this)
         
         tokenInput = findViewById(R.id.tokenInput)
         channelInput = findViewById(R.id.channelInput)
@@ -38,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         minutesInput = findViewById(R.id.minutesInput)
         secondsInput = findViewById(R.id.secondsInput)
         intervalToggle = findViewById(R.id.intervalToggle)
+        backgroundToggle = findViewById(R.id.backgroundToggle)
         scheduledList = findViewById(R.id.scheduledList)
         
         loadSavedData()
@@ -55,6 +58,15 @@ class MainActivity : AppCompatActivity() {
         
         findViewById<Button>(R.id.addBtn).setOnClickListener { addScheduledMessage() }
         
+        backgroundToggle.setOnCheckedChangeListener { _, isChecked ->
+            storage.saveBackgroundEnabled(isChecked)
+            if (isChecked) {
+                scheduler.switchToBackground()
+            } else {
+                scheduler.switchToForeground { _, _ -> }
+            }
+        }
+        
         scheduler.setUpdateCallback { 
             updateList()
             saveScheduled()
@@ -71,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         minutesInput.setText(storage.getMinutes())
         secondsInput.setText(storage.getSeconds())
         intervalToggle.isChecked = storage.getInterval()
+        backgroundToggle.isChecked = storage.getBackgroundEnabled()
     }
 
     private fun setupTextWatchers() {
