@@ -130,10 +130,9 @@
         android:layout_gravity="top|end"
         android:layout_margin="16dp"
         android:text="STOP"
-        android:textSize="11sp"
+        android:textSize="10sp"
         android:textStyle="bold"
-        android:maxLines="1"
-        android:singleLine="true"
-        android:ellipsize="none"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp"
         android:elevation="8dp"/>
 </FrameLayout>
